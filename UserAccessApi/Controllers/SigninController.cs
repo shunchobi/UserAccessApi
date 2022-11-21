@@ -2,32 +2,33 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using UserAccessApi.Models;
 
 namespace UserAccessApi.Controllers
 {
+    [AllowAnonymous]
     [ApiController]
     [Route("api/[controller]")]
-    [AllowAnonymous]
-    public class TokenCreationController : ControllerBase
+    public class SigninController : Controller
     {
-        private readonly JwtSettingModel _jwtSettingModel;
-        private HttpResponse _response;
-        public TokenCreationController(JwtSettingModel jwtSettingModel, HttpResponse response)
+        private readonly IConfiguration _configuration;
+        private JwtSettingModel? JwtSettingModel { get; set; }
+
+        public SigninController(IConfiguration configuration)
         {
-            _jwtSettingModel = jwtSettingModel;
-            _response = response;
+            _configuration = configuration;
+            JwtSettingModel = _configuration.GetSection(JwtSettingModel.Jwt).Get<JwtSettingModel>();
         }
+
 
         [HttpPost]
         public async Task<ActionResult<object>> CreateToken(User? user)
         {
-            var test = _jwtSettingModel.CookieContainKey;
-
             if (user is null)
-                return Unauthorized();
+                return NoContent();
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -40,11 +41,11 @@ namespace UserAccessApi.Controllers
             new Claim(ClaimTypes.Role, user.Role)
         }),
                 Expires = DateTime.UtcNow.AddMinutes(5),
-                Issuer = _jwtSettingModel.Issuer,
-                Audience = _jwtSettingModel.Audience,
+                Issuer = JwtSettingModel.Issuer,
+                Audience = JwtSettingModel.Audience,
                 SigningCredentials = new SigningCredentials
                 (new SymmetricSecurityKey(
-                    Encoding.ASCII.GetBytes(_jwtSettingModel.Key)),
+                    Encoding.ASCII.GetBytes(JwtSettingModel.Key)),
                 SecurityAlgorithms.HmacSha512Signature),
             };
 
@@ -60,7 +61,8 @@ namespace UserAccessApi.Controllers
                 Secure = true
             };
 
-            _response.Cookies.Append(_jwtSettingModel.CookieContainKey, stringToken, cookieOptions);
+
+            Response.Cookies.Append(JwtSettingModel.CookieContainKey, stringToken, cookieOptions);
             return Ok();
         }
     }

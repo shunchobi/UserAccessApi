@@ -64,9 +64,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// DI definition
-builder.Services.Configure<JwtSettingModel>(builder.Configuration.GetSection("Jwt"));
-
+// optional DI definition
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
